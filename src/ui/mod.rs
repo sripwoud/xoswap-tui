@@ -33,7 +33,7 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
     // Title
     let title = Paragraph::new(Text::styled(
         "XOSwap TUI",
-        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+        Style::default().fg(Color::LightMagenta).add_modifier(Modifier::BOLD),
     ))
     .alignment(ratatui::layout::Alignment::Center)
     .block(Block::default().borders(Borders::ALL).title("XOSwap"));
@@ -43,32 +43,32 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
     let (msg, style) = match app.input_mode {
         InputMode::Normal => (
             "Press 'f' to select from asset, 't' to select to asset, 'a' to enter address, 'm' to enter amount, 'p' to select provider, 'g' to generate QR, 'q' to quit",
-            Style::default().add_modifier(Modifier::RAPID_BLINK),
+            Style::default().fg(Color::LightYellow).add_modifier(Modifier::BOLD),
         ),
         InputMode::SelectingFrom => (
             "Press Enter to select from asset, Esc to cancel",
-            Style::default(),
+            Style::default().fg(Color::LightCyan),
         ),
         InputMode::SelectingTo => (
             "Press Enter to select to asset, Esc to cancel",
-            Style::default(),
+            Style::default().fg(Color::LightCyan),
         ),
         InputMode::EnteringAddress => (
             "Enter an address, press Enter when done, Esc to cancel",
-            Style::default(),
+            Style::default().fg(Color::LightCyan),
         ),
         InputMode::EnteringAmount => (
             "Enter an amount, press Enter when done, Esc to cancel",
-            Style::default(),
+            Style::default().fg(Color::LightCyan),
         ),
         InputMode::SelectingProvider => (
             "Use Up/Down keys to select provider, Enter to confirm, Esc to cancel",
-            Style::default(),
+            Style::default().fg(Color::LightCyan),
         ),
     };
     let instructions = Paragraph::new(Text::styled(msg, style))
         .alignment(ratatui::layout::Alignment::Center)
-        .block(Block::default().borders(Borders::ALL).title("Instructions"));
+        .block(Block::default().borders(Borders::ALL).title("Instructions").title_style(Style::default().fg(Color::LightYellow).add_modifier(Modifier::BOLD)));
     f.render_widget(instructions, chunks[1]);
 
     // From asset
@@ -85,20 +85,20 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
         .collect::<Vec<_>>();
 
     let from_asset_table = Table::new(from_asset_rows, vec![Constraint::Percentage(50), Constraint::Percentage(50)])
-        .header(Row::new(vec!["Asset", "Price"]).style(Style::default().fg(Color::Yellow)))
+        .header(Row::new(vec!["Asset", "Price"]).style(Style::default().fg(Color::LightYellow).add_modifier(Modifier::BOLD)))
         .block(
             Block::default()
                 .borders(Borders::ALL)
                 .title("From Asset")
                 .style(
                     if matches!(app.input_mode, InputMode::SelectingFrom) {
-                        Style::default().fg(Color::Cyan)
+                        Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD)
                     } else {
-                        Style::default()
+                        Style::default().fg(Color::White)
                     },
                 ),
         )
-        .row_highlight_style(Style::default().add_modifier(Modifier::REVERSED));
+        .row_highlight_style(Style::default().bg(Color::DarkGray).add_modifier(Modifier::BOLD));
 
     let mut from_state = app.from_asset_table_state.clone();
     f.render_stateful_widget(from_asset_table, chunks[2], &mut from_state);
@@ -117,20 +117,20 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
         .collect::<Vec<_>>();
 
     let to_asset_table = Table::new(to_asset_rows, vec![Constraint::Percentage(50), Constraint::Percentage(50)])
-        .header(Row::new(vec!["Asset", "Price"]).style(Style::default().fg(Color::Yellow)))
+        .header(Row::new(vec!["Asset", "Price"]).style(Style::default().fg(Color::LightYellow).add_modifier(Modifier::BOLD)))
         .block(
             Block::default()
                 .borders(Borders::ALL)
                 .title("To Asset")
                 .style(
                     if matches!(app.input_mode, InputMode::SelectingTo) {
-                        Style::default().fg(Color::Cyan)
+                        Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD)
                     } else {
-                        Style::default()
+                        Style::default().fg(Color::White)
                     },
                 ),
         )
-        .row_highlight_style(Style::default().add_modifier(Modifier::REVERSED));
+        .row_highlight_style(Style::default().bg(Color::DarkGray).add_modifier(Modifier::BOLD));
 
     let mut to_state = app.to_asset_table_state.clone();
     f.render_stateful_widget(to_asset_table, chunks[3], &mut to_state);
@@ -139,9 +139,9 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
     let address = Paragraph::new(Text::from(app.address.as_str()))
         .style(
             if matches!(app.input_mode, InputMode::EnteringAddress) {
-                Style::default().fg(Color::Yellow)
+                Style::default().fg(Color::LightYellow).add_modifier(Modifier::BOLD)
             } else {
-                Style::default()
+                Style::default().fg(Color::White)
             },
         )
         .block(Block::default().borders(Borders::ALL).title("Address"));
@@ -151,9 +151,9 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
     let amount = Paragraph::new(Text::from(app.amount.as_str()))
         .style(
             if matches!(app.input_mode, InputMode::EnteringAmount) {
-                Style::default().fg(Color::Yellow)
+                Style::default().fg(Color::LightYellow).add_modifier(Modifier::BOLD)
             } else {
-                Style::default()
+                Style::default().fg(Color::White)
             },
         )
         .block(Block::default().borders(Borders::ALL).title("Amount"));
@@ -197,7 +197,7 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
             .collect();
 
         let quote_table = Table::new(quote_rows, vec![Constraint::Percentage(50), Constraint::Percentage(50)])
-            .header(Row::new(vec!["Provider", "Quote"]).style(Style::default().fg(Color::Yellow)))
+            .header(Row::new(vec!["Provider", "Quote"]).style(Style::default().fg(Color::LightYellow).add_modifier(Modifier::BOLD)))
             .block(Block::default().borders(Borders::ALL).title("Quotes"));
 
         f.render_widget(quote_table, chunks[6]);
@@ -209,9 +209,9 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
             .enumerate()
             .map(|(i, (name, url))| {
                 let style = if app.selected_provider == Some(i) {
-                    Style::default().fg(Color::Green)
+                    Style::default().fg(Color::LightGreen).add_modifier(Modifier::BOLD)
                 } else {
-                    Style::default()
+                    Style::default().fg(Color::White)
                 };
                 Row::new(vec![
                     Cell::from(name.clone()).style(style),
@@ -221,20 +221,20 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
             .collect();
 
         let providers_table = Table::new(provider_items, vec![Constraint::Percentage(30), Constraint::Percentage(70)])
-            .header(Row::new(vec!["Provider", "API Endpoint"]).style(Style::default().fg(Color::Yellow)))
+            .header(Row::new(vec!["Provider", "API Endpoint"]).style(Style::default().fg(Color::LightYellow).add_modifier(Modifier::BOLD)))
             .block(
                 Block::default()
                     .borders(Borders::ALL)
                     .title("Providers")
                     .style(
                         if matches!(app.input_mode, InputMode::SelectingProvider) {
-                            Style::default().fg(Color::Cyan)
+                            Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD)
                         } else {
-                            Style::default()
+                            Style::default().fg(Color::White)
                         },
                     )
             )
-            .row_highlight_style(Style::default().add_modifier(Modifier::REVERSED));
+            .row_highlight_style(Style::default().bg(Color::DarkGray).add_modifier(Modifier::BOLD));
 
         let mut provider_state = TableState::default();
         if let Some(selected) = app.selected_provider {
@@ -246,7 +246,7 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
 
     // Status
     let status = Paragraph::new(Text::from(app.message.as_str()))
-        .style(Style::default().fg(Color::White))
+        .style(Style::default().fg(Color::LightGreen))
         .block(Block::default().borders(Borders::ALL).title("Status"));
     f.render_widget(status, chunks[7]);
 }
