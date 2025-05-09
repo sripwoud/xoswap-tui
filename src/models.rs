@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use ratatui::widgets::TableState;
+use std::collections::HashMap;
 
 // Import custom modules
 
@@ -14,10 +14,10 @@ pub enum InputMode {
 }
 
 /// Mock data for assets
-pub const MOCK_ASSETS: [&str; 3] = ["BTC", "ETH", "XOS"];
+pub const MOCK_ASSETS: [&str; 3] = ["BTC", "ETH", "SOL"];
 
 /// Mock data for asset prices
-pub const MOCK_PRICES: [f64; 3] = [40000.0, 2000.0, 1.0];
+pub const MOCK_PRICES: [f64; 3] = [100000.0, 2000.0, 140.0];
 
 /// Mock data for swap providers
 pub const MOCK_PROVIDERS: [(&str, &str); 5] = [
@@ -61,7 +61,10 @@ impl Default for App {
             input_mode: InputMode::Normal,
             from_asset_table_state: from_state,
             to_asset_table_state: to_state,
-            providers: MOCK_PROVIDERS.iter().map(|&(name, url)| (name.to_string(), url.to_string())).collect(),
+            providers: MOCK_PROVIDERS
+                .iter()
+                .map(|&(name, url)| (name.to_string(), url.to_string()))
+                .collect(),
             quotes: HashMap::new(),
             selected_provider: None,
             show_qr: false,
