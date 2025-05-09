@@ -3,14 +3,9 @@ run = "cargo build --workspace --all-features --all-targets --release"
 description = "Build the project"
 alias = "b"
 
-[tasks.docs]
-run = "cargo doc --no-deps --workspace --all-features --open"
-description = "Build and open the docs"
-
-[tasks.test]
-run = "cargo nextest run"
-description = "Run the tests"
-alias = "t"
+[tasks.run]
+run = "cargo run --bin xoswap"
+description = "Run the application"
 
 [tools]
 "cargo:cargo-llvm-cov" = "latest"
