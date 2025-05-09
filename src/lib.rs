@@ -3,7 +3,7 @@
 //! This application provides a text-based UI for performing crypto swaps
 //! using various swap providers.
 
-// Re-export modules
+// Define modules
 pub mod app;
 pub mod error;
 pub mod models;
