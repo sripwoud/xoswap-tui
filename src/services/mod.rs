@@ -1,7 +1,6 @@
 use crate::error::SwapError;
 use std::collections::HashMap;
 use std::io;
-use std::process::{Command, Stdio};
 
 /// Fetch a swap quote from the selected provider
 pub fn fetch_quote(
@@ -42,51 +41,44 @@ pub fn fetch_quote(
     Ok(quotes)
 }
 
-/// Generate a QR code for the given data
-pub fn generate_qr_code(data: &str) -> Result<String, io::Error> {
-    // This function attempts to use the 'qrencode' command-line tool to generate
-    // QR codes in the terminal. If qrencode is not available, it falls back to
-    // a mock representation.
+/// Generate a QR code for a swap transaction
+pub fn generate_qr_code(
+    from_asset: &str,
+    to_asset: &str,
+    amount: &str,
+    address: &str,
+    provider: &str
+) -> Result<String, io::Error> {
+    // In a real implementation, we would generate a proper QR code
+    // with the transaction data. Here we'll use a mock representation.
     
-    // Try to use the qrencode command if available
-    let qrencode_result = Command::new("qrencode")
-        .args(["-t", "ansiutf8", data])
-        .stdout(Stdio::piped())
-        .spawn();
+    // Generate a transaction ID using a simple hash function
+    let tx_id = format!(
+        "TX-{:x}",
+        from_asset.len() + to_asset.len() + amount.len() + address.len() + provider.len()
+    );
     
-    match qrencode_result {
-        Ok(mut child) => {
-            let output = String::new();
-            if let Some(stdout) = child.stdout.take() {
-                let mut reader = std::io::BufReader::new(stdout);
-                std::io::copy(&mut reader, &mut output.as_bytes().to_vec())?;
-            }
-            
-            match child.wait() {
-                Ok(status) if status.success() => Ok(output),
-                _ => {
-                    // Fallback to mock QR code
-                    Ok(generate_mock_qr_code(data))
-                }
-            }
-        }
-        Err(_) => {
-            // qrencode not available, generate a simple mock QR code
-            Ok(generate_mock_qr_code(data))
-        }
-    }
+    // Create a more detailed ASCII art QR code
+    let qr_code = format!(
+        "┌───────────────────────┐\n\
+         │ █▀▀▀▀▀█ █▄█▀█ █▀▀▀▀▀█ │\n\
+         │ █ ███ █  ▀▄▀█ █ ███ █ │\n\
+         │ █ ▀▀▀ █ ▄█ ▄▀ █ ▀▀▀ █ │\n\
+         │ ▀▀▀▀▀▀▀ ▀▄▀▄▀ ▀▀▀▀▀▀▀ │\n\
+         │ ▀█ ▀▀▄▄ ▄▀▀ ▄▀█▀▀▄█▀█ │\n\
+         │ ▀ █▀█▀▀▄█▄▄▀█ █▀▄▄▀▀█ │\n\
+         │ █▀▀▀▀▀█ █ █ ▄ █▀▀▀▀▀█ │\n\
+         │ █ ███ █ ▀█▀ ▄▀█ ███ █ │\n\
+         │ █ ▀▀▀ █ ██▄▀█ █ ▀▀▀ █ │\n\
+         └───────────────────────┘\n\
+         Transaction: {}\n\
+         Swap {} {} → {} via {}\n\
+         Destination: {}\n\
+         \n\
+         [Press Esc or q to go back]",
+        tx_id, amount, from_asset, to_asset, provider, address
+    );
+    
+    Ok(qr_code)
 }
 
-fn generate_mock_qr_code(data: &str) -> String {
-    // Simple mock QR code (just for visualization)
-    let mut mock_qr = String::new();
-    mock_qr.push_str("▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄\n");
-    mock_qr.push_str("█ ▄▄▄▄▄ █▀█▀█ ▄▄▄▄▄ █\n");
-    mock_qr.push_str("█ █   █ █▀▀▀█ █   █ █\n");
-    mock_qr.push_str("█ █▄▄▄█ █▀ ▀█ █▄▄▄█ █\n");
-    mock_qr.push_str("█▄▄▄▄▄▄▄█▄█ █▄▄▄▄▄▄▄█\n");
-    mock_qr.push_str("█  ▄██▄▄ ▀▄  █ ▄▄▀▀ █\n");
-    mock_qr.push_str(format!("█  Data: {} █\n", data).as_str());
-    mock_qr.push_str("▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\n");
-    mock_qr
-}

@@ -9,7 +9,7 @@ use ratatui::{
 use std::{error::Error, io};
 
 use crate::models::{App, InputMode, MOCK_ASSETS};
-use crate::services::fetch_quote;
+use crate::services::{fetch_quote, generate_qr_code};
 use crate::ui::ui;
 
 /// Starts the application and runs the main loop
@@ -50,8 +50,9 @@ where
         if let Event::Key(key) = event::read()? {
             if key.code == KeyCode::Char('q') && !app.show_qr && matches!(app.input_mode, InputMode::Normal) {
                 return Ok(());
-            } else if app.show_qr && key.code == KeyCode::Char('q') {
+            } else if app.show_qr && (key.code == KeyCode::Char('q') || key.code == KeyCode::Esc) {
                 app.show_qr = false;
+                app.message = "QR code closed".to_string();
                 continue;
             }
 
@@ -61,6 +62,7 @@ where
                 InputMode::SelectingTo => handle_select_to_asset(app, key),
                 InputMode::EnteringAddress => handle_address_input(app, key),
                 InputMode::EnteringAmount => handle_amount_input(app, key),
+                InputMode::SelectingProvider => handle_select_provider(app, key),
             }
         }
     }
@@ -71,6 +73,38 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Char('f') => {
             app.input_mode = InputMode::SelectingFrom;
+        }
+        KeyCode::Up | KeyCode::Char('k') => {
+            if matches!(app.input_mode, InputMode::Normal) {
+                // Navigate up in the from asset table
+                let selected = match app.from_asset_table_state.selected() {
+                    Some(i) => {
+                        if i == 0 {
+                            MOCK_ASSETS.len() - 1
+                        } else {
+                            i - 1
+                        }
+                    }
+                    None => 0,
+                };
+                app.from_asset_table_state.select(Some(selected));
+            }
+        }
+        KeyCode::Down | KeyCode::Char('j') => {
+            if matches!(app.input_mode, InputMode::Normal) {
+                // Navigate down in the from asset table
+                let selected = match app.from_asset_table_state.selected() {
+                    Some(i) => {
+                        if i >= MOCK_ASSETS.len() - 1 {
+                            0
+                        } else {
+                            i + 1
+                        }
+                    }
+                    None => 0,
+                };
+                app.from_asset_table_state.select(Some(selected));
+            }
         }
         KeyCode::Char('t') => {
             app.input_mode = InputMode::SelectingTo;
@@ -123,23 +157,57 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
             }
         }
         KeyCode::Char('p') => {
-            // Navigate through providers
-            if app.selected_provider.is_none() {
-                app.selected_provider = Some(0);
-            } else {
-                let next = (app.selected_provider.unwrap() + 1) % app.providers.len();
-                app.selected_provider = Some(next);
-            }
+            app.input_mode = InputMode::SelectingProvider;
+            app.message = "Use arrow keys to select provider, Enter to confirm".to_string();
         }
         KeyCode::Char('g') => {
             // Generate QR code
+            if app.from_asset.is_none() || app.to_asset.is_none() {
+                app.message = "Error: Select from and to assets first".to_string();
+                return;
+            }
+            
             if app.address.is_empty() {
                 app.message = "Error: Enter an address first".to_string();
                 return;
             }
+            
+            if app.amount.is_empty() {
+                app.message = "Error: Enter an amount first".to_string();
+                return;
+            }
+            
+            if app.selected_provider.is_none() {
+                app.message = "Error: Select a provider first".to_string();
+                return;
+            }
 
             app.show_qr = true;
-            app.message = "Showing QR code for address".to_string();
+            app.message = format!(
+                "Showing QR code for swap: {} {} to {}, sending to {}",
+                app.amount,
+                app.from_asset.as_ref().unwrap(),
+                app.to_asset.as_ref().unwrap(),
+                app.address
+            );
+            
+            // Generate a QR code representation for this swap
+            match generate_qr_code(
+                app.from_asset.as_ref().unwrap(),
+                app.to_asset.as_ref().unwrap(),
+                &app.amount,
+                &app.address,
+                &app.providers[app.selected_provider.unwrap()].0
+            ) {
+                Ok(qr) => {
+                    app.qr_code = Some(qr);
+                    app.message = format!("QR code generated for the swap transaction");
+                }
+                Err(e) => {
+                    app.qr_code = None;
+                    app.message = format!("Failed to generate QR code: {}", e);
+                }
+            }
         }
         _ => {}
     }
@@ -266,6 +334,51 @@ fn handle_amount_input(app: &mut App, key: KeyEvent) {
         }
         KeyCode::Backspace => {
             app.amount.pop();
+        }
+        _ => {}
+    }
+}
+
+/// Handle input when selecting provider
+fn handle_select_provider(app: &mut App, key: KeyEvent) {
+    match key.code {
+        KeyCode::Esc => {
+            app.input_mode = InputMode::Normal;
+        }
+        KeyCode::Down | KeyCode::Char('j') => {
+            // Cycle through providers
+            let next = match app.selected_provider {
+                Some(current) => Some((current + 1) % app.providers.len()),
+                None => Some(0),
+            };
+            app.selected_provider = next;
+            if let Some(idx) = next {
+                app.message = format!("Selected provider: {}", app.providers[idx].0);
+            }
+        }
+        KeyCode::Up | KeyCode::Char('k') => {
+            // Cycle through providers (reverse)
+            let prev = match app.selected_provider {
+                Some(current) => {
+                    if current == 0 {
+                        Some(app.providers.len() - 1)
+                    } else {
+                        Some(current - 1)
+                    }
+                }
+                None => Some(app.providers.len() - 1),
+            };
+            app.selected_provider = prev;
+            if let Some(idx) = prev {
+                app.message = format!("Selected provider: {}", app.providers[idx].0);
+            }
+        }
+        KeyCode::Enter => {
+            if app.selected_provider.is_some() {
+                let idx = app.selected_provider.unwrap();
+                app.message = format!("Confirmed provider: {}", app.providers[idx].0);
+                app.input_mode = InputMode::Normal;
+            }
         }
         _ => {}
     }

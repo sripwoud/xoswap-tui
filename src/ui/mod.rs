@@ -42,7 +42,7 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
     // Instructions
     let (msg, style) = match app.input_mode {
         InputMode::Normal => (
-            "Press 'f' to select from asset, 't' to select to asset, 'a' to enter address, 'm' to enter amount, 'q' to quit",
+            "Press 'f' to select from asset, 't' to select to asset, 'a' to enter address, 'm' to enter amount, 'p' to select provider, 'g' to generate QR, 'q' to quit",
             Style::default().add_modifier(Modifier::RAPID_BLINK),
         ),
         InputMode::SelectingFrom => (
@@ -59,6 +59,10 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
         ),
         InputMode::EnteringAmount => (
             "Enter an amount, press Enter when done, Esc to cancel",
+            Style::default(),
+        ),
+        InputMode::SelectingProvider => (
+            "Use Up/Down keys to select provider, Enter to confirm, Esc to cancel",
             Style::default(),
         ),
     };
@@ -161,9 +165,23 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
         let inner_area = qr_block.inner(chunks[6]);
         f.render_widget(qr_block, chunks[6]);
         
-        // In a real app, we would render an actual QR code here
-        // This is just a placeholder for the actual QR code rendering
-        let qr_text = Paragraph::new("QR Code would appear here\n[Press q to go back]")
+        // Display the stored QR code if available, otherwise show a message
+        let qr_display = match &app.qr_code {
+            Some(qr_code) => qr_code.clone(),
+            None => {
+                if let (Some(_), Some(_)) = (&app.from_asset, &app.to_asset) {
+                    if !app.address.is_empty() && !app.amount.is_empty() && app.selected_provider.is_some() {
+                        "QR code not generated yet. Press 'g' to generate.".to_string()
+                    } else {
+                        "Missing required information for QR code\n[Press Esc or q to go back]".to_string()
+                    }
+                } else {
+                    "Missing required information for QR code\n[Press Esc or q to go back]".to_string()
+                }
+            }
+        };
+        
+        let qr_text = Paragraph::new(Text::from(qr_display))
             .alignment(ratatui::layout::Alignment::Center);
         f.render_widget(qr_text, inner_area);
     } else if !app.quotes.is_empty() {
@@ -189,19 +207,33 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
             .providers
             .iter()
             .enumerate()
-            .map(|(i, (name, _))| {
+            .map(|(i, (name, url))| {
                 let style = if app.selected_provider == Some(i) {
                     Style::default().fg(Color::Green)
                 } else {
                     Style::default()
                 };
-                Row::new(vec![Cell::from(name.clone()).style(style)])
+                Row::new(vec![
+                    Cell::from(name.clone()).style(style),
+                    Cell::from(url.clone()).style(style)
+                ])
             })
             .collect();
 
-        let providers_table = Table::new(provider_items, vec![Constraint::Percentage(100)])
-            .header(Row::new(vec!["Provider"]).style(Style::default().fg(Color::Yellow)))
-            .block(Block::default().borders(Borders::ALL).title("Providers"))
+        let providers_table = Table::new(provider_items, vec![Constraint::Percentage(30), Constraint::Percentage(70)])
+            .header(Row::new(vec!["Provider", "API Endpoint"]).style(Style::default().fg(Color::Yellow)))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title("Providers")
+                    .style(
+                        if matches!(app.input_mode, InputMode::SelectingProvider) {
+                            Style::default().fg(Color::Cyan)
+                        } else {
+                            Style::default()
+                        },
+                    )
+            )
             .row_highlight_style(Style::default().add_modifier(Modifier::REVERSED));
 
         let mut provider_state = TableState::default();

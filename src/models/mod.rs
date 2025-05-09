@@ -9,6 +9,7 @@ pub enum InputMode {
     SelectingTo,
     EnteringAddress,
     EnteringAmount,
+    SelectingProvider,
     Normal,
 }
 
@@ -41,6 +42,7 @@ pub struct App {
     pub quotes: HashMap<String, f64>,
     pub selected_provider: Option<usize>,
     pub show_qr: bool,
+    pub qr_code: Option<String>,
 }
 
 impl Default for App {
@@ -63,6 +65,7 @@ impl Default for App {
             quotes: HashMap::new(),
             selected_provider: None,
             show_qr: false,
+            qr_code: None,
         }
     }
 }
