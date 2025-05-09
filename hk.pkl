@@ -1,0 +1,12 @@
+amends "package://github.com/jdx/hk/releases/download/v1.0.0/hk@1.0.0#/Config.pkl"
+
+hooks {
+  ["pre-commit"] {
+    fix = true
+    steps {
+      ["format"] {
+        fix = "dprint fmt"
+      }
+    }
+  }
+}

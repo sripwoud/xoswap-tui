@@ -1,0 +1,22 @@
+[tasks.build]
+run = "cargo build --workspace --all-features --all-targets --release"
+description = "Build the project"
+alias = "b"
+
+[tasks.docs]
+run = "cargo doc --no-deps --workspace --all-features --open"
+description = "Build and open the docs"
+
+[tasks.test]
+run = "cargo nextest run"
+description = "Run the tests"
+alias = "t"
+
+[tools]
+"cargo:cargo-llvm-cov" = "latest"
+"cargo:cargo-nextest" = "latest"
+"cargo:convco" = "latest"
+dprint = "latest"
+pkl = "latest"
+rust = "latest"
+hk = "latest"

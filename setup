@@ -1,0 +1,65 @@
+#!/bin/sh
+
+set -eu
+
+ORANGE="\033[33m"
+RED="\033[31m"
+RESET="\033[0m"
+
+log() {
+  printf "%b\n" "$1"
+}
+
+install_mise() {
+  curl https://mise.run | sh
+  echo "✅ Installed ${ORANGE}mise$RESET"
+}
+
+maybe_install_mise() {
+  if ! command -v mise >/dev/null; then
+    install_mise
+  fi
+}
+
+# i don't care that much if intermediate dev branches commits aren't always conventional
+# but i do care about convenional commits on main because there are used for semantic versioning/releasing
+use_convco_as_git_editor_only_on_main() {
+  cat >.git/hooks/prepare-commit-msg <<'EOF'
+  #!/bin/sh
+
+  if [ "$(git rev-parse --abbrev-ref HEAD)" = "main" ]; then
+      git config --local core.editor "convco commit"
+  else
+      # Restore the default editor for normal commits
+      default_editor=$(git config --local --get sequence.editor || git config --global --get core.editor || echo "$EDITOR" || command -v nvim || command -v vim || command -v vi || command -v nano)
+
+      if [ -n "$default_editor" ]; then
+          git config --local core.editor "$default_editor"
+      else
+          echo "No default editor found. Please set one in your git config or set the EDITOR environment variable."
+      fi
+  fi
+
+  # Always ensure interactive rebase uses a normal editor (not convco)
+  if [ -z "$(git config --local --get sequence.editor)" ]; then
+      editor=$(git config --global --get core.editor || echo "$EDITOR" || command -v nvim || command -v vim || command -v vi || command -v nano)
+
+      if [ -n "$editor" ]; then
+          git config --local sequence.editor "$editor"
+      else
+          echo "No default editor found. Please set one in your git config or set the EDITOR environment variable."
+      fi
+  fi
+EOF
+
+  chmod +x .git/hooks/prepare-commit-msg
+}
+
+main() {
+  maybe_install_mise
+  mise up --bump && log "✅ Installed tools"
+  use_convco_as_git_editor_only_on_main
+  hk install >/dev/null && log "✅ Configured git hooks"
+}
+
+main
