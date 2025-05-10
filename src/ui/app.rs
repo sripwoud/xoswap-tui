@@ -21,15 +21,8 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     // Main loop
     while !model.quit {
-        // Check for 'q' key directly
-        if event::poll(Duration::from_millis(0))? {
-            if let CEvent::Key(KeyEvent { code, .. }) = event::read()? {
-                if code == KeyCode::Char('q') || code == KeyCode::Esc {
-                    model.quit = true;
-                    break;
-                }
-            }
-        }
+        // We'll let the component system handle all key events
+        // to avoid conflicting with component-level key handling
 
         // Tick
         match model.app.tick(PollStrategy::Once) {

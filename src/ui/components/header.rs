@@ -69,8 +69,17 @@ impl MockComponent for Header {
 }
 
 impl Component<Msg, NoUserEvent> for Header {
-    fn on(&mut self, _: Event<NoUserEvent>) -> Option<Msg> {
-        // does nothing
-        None
+    fn on(&mut self, ev: Event<NoUserEvent>) -> Option<Msg> {
+        match ev {
+            Event::Keyboard(KeyEvent {
+                code: Key::Char('q'),
+                modifiers: KeyModifiers::NONE,
+            }) => Some(Msg::AppClose),
+            Event::Keyboard(KeyEvent {
+                code: Key::Esc,
+                modifiers: KeyModifiers::NONE,
+            }) => Some(Msg::AppClose),
+            _ => None,
+        }
     }
 }

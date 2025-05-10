@@ -11,6 +11,8 @@ pub enum Id {
     Header,
     /// Instructions bar component
     InstructionsBar,
+    /// Asset table component
+    AssetTable,
     /// Status bar component
     StatusBar,
 }
@@ -20,6 +22,7 @@ impl Display for Id {
         match self {
             Self::Header => write!(f, "header"),
             Self::InstructionsBar => write!(f, "instructions_bar"),
+            Self::AssetTable => write!(f, "asset_table"),
             Self::StatusBar => write!(f, "status_bar"),
         }
     }

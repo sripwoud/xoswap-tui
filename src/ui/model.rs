@@ -9,6 +9,7 @@ use tuirealm::ratatui::layout::{Constraint, Direction, Layout};
 use tuirealm::terminal::{TerminalAdapter, TerminalBridge};
 use tuirealm::{Application, EventListenerCfg, Update};
 
+use crate::ui::components::asset_table::AssetTable;
 use crate::ui::components::header::Header;
 use crate::ui::components::instructions_bar::InstructionsBar;
 use crate::ui::components::status_bar::StatusBar;
@@ -71,14 +72,20 @@ where
             .mount(Id::InstructionsBar, Box::new(InstructionsBar::new()), Vec::default())
             .is_ok());
 
+        // Mount the asset table component
+        assert!(self
+            .app
+            .mount(Id::AssetTable, Box::new(AssetTable::new()), Vec::default())
+            .is_ok());
+
         // Mount the status bar component (visual only)
         assert!(self
             .app
             .mount(Id::StatusBar, Box::new(StatusBar::new()), Vec::default())
             .is_ok());
 
-        // Make the header component active to receive keyboard events
-        assert!(self.app.active(&Id::Header).is_ok());
+        // Make the asset table active to receive keyboard events
+        assert!(self.app.active(&Id::AssetTable).is_ok());
     }
 
     /// Render the UI
@@ -105,6 +112,8 @@ where
                 self.app.view(&Id::Header, f, chunks[0]);
                 // Render the instructions bar
                 self.app.view(&Id::InstructionsBar, f, chunks[1]);
+                // Render the asset table
+                self.app.view(&Id::AssetTable, f, chunks[2]);
                 // Render the status bar
                 self.app.view(&Id::StatusBar, f, chunks[3]);
             })
@@ -126,6 +135,35 @@ where
             match msg {
                 Msg::AppClose => {
                     self.quit = true;
+                    None
+                }
+                Msg::AssetSelected(index) => {
+                    // Asset was highlighted
+                    None
+                }
+                Msg::AssetChosenAsFrom(index) => {
+                    // Asset was selected as FROM asset
+                    self.redraw = true;
+                    None
+                }
+                Msg::AssetChosenAsTo(index) => {
+                    // Asset was selected as TO asset
+                    self.redraw = true;
+                    None
+                }
+                Msg::EnterFromAssetMode => {
+                    // Entering FROM asset selection mode
+                    self.redraw = true;
+                    None
+                }
+                Msg::EnterToAssetMode => {
+                    // Entering TO asset selection mode
+                    self.redraw = true;
+                    None
+                }
+                Msg::ExitAssetSelectionMode => {
+                    // Exiting asset selection mode
+                    self.redraw = true;
                     None
                 }
                 Msg::None => None,

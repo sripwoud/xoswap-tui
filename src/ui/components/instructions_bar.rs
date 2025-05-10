@@ -32,7 +32,7 @@ impl MockComponent for InstructionsBar {
         // Check if visible
         if self.props.get_or(Attribute::Display, AttrValue::Flag(true)) == AttrValue::Flag(true) {
             // Get properties
-            let instructions_text = "Instructions";
+            let instructions_text = "(↑/↓) Navigate | (Enter) Select | (f) FROM mode | (t) TO mode | (q) Quit";
             let alignment = Alignment::Center;
             let foreground = Color::Yellow;
             let background = Color::Reset;
