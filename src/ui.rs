@@ -190,11 +190,16 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
     // Create styled spans for the swap text
     let mut swap_spans = Vec::new();
 
-    // Create a cleaner swap display showing exact values without brackets
-    // Format: {from_amount} {from_ticker} --> {to_amount} {to_ticker}
-
-    // FROM section always in red
-    swap_spans.push(Span::styled(from_amount, Style::default().fg(Color::Red)));
+    // FROM section always in red, highlight amount if entering amount
+    let from_amount_style = if matches!(app.workflow_stage, WorkflowStage::EnteringAmount) {
+        Style::default()
+            .bg(Color::Yellow)
+            .fg(Color::Black)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().fg(Color::Red)
+    };
+    swap_spans.push(Span::styled(from_amount, from_amount_style));
 
     swap_spans.push(Span::raw(" "));
 
