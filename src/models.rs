@@ -12,6 +12,16 @@ pub enum InputMode {
     Normal,
 }
 
+/// Workflow stages to track the user flow
+pub enum WorkflowStage {
+    Normal,
+    SelectingFrom,
+    SelectingTo,
+    EnteringAmount,
+    EnteringAddress,
+    ShowingQR,
+}
+
 /// Mock data for assets
 pub const MOCK_ASSETS: [&str; 3] = ["BTC", "ETH", "SOL"];
 
@@ -48,6 +58,7 @@ pub struct App {
     pub amount: String,
     pub message: String,
     pub input_mode: InputMode,
+    pub workflow_stage: WorkflowStage,
     pub asset_table_state: TableState,
     pub providers: Vec<(String, String)>,
     pub quotes: HashMap<String, f64>,
@@ -67,7 +78,8 @@ impl Default for App {
             address: String::new(),
             amount: String::new(),
             message: String::new(),
-            input_mode: InputMode::Normal,
+            input_mode: InputMode::SelectingFrom,
+            workflow_stage: WorkflowStage::SelectingFrom,
             asset_table_state: asset_state,
             providers: MOCK_PROVIDERS
                 .iter()

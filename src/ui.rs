@@ -7,7 +7,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::models::{App, InputMode, MOCK_ASSETS, MOCK_PRICES};
+use crate::models::{App, InputMode, WorkflowStage, MOCK_ASSETS, MOCK_PRICES};
 
 /// Renders the user interface
 pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
@@ -39,46 +39,35 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
     f.render_widget(title, chunks[0]);
 
     // Instructions - with blinking effect and no borders
-    let (msg, style) = match app.input_mode {
-        InputMode::Normal => (
-            "Press 'f' to select from asset, 't' to select to asset, 'a' to enter address, 'm' to enter amount, 'q' to quit",
+    let (msg, style) = match app.workflow_stage {
+        WorkflowStage::SelectingFrom => (
+            "Use arrow keys to select FROM asset, press Enter to confirm. [f/t/a/m to switch modes]",
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        ),
+        WorkflowStage::SelectingTo => (
+            "Use arrow keys to select TO asset, press Enter to confirm. [f/t/a/m to switch modes]",
+            Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+        ),
+        WorkflowStage::EnteringAmount => (
+            "Enter amount to swap, press Enter when done. [f/t/a/m to switch modes]",
+            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+        ),
+        WorkflowStage::EnteringAddress => (
+            "Enter destination address, press Enter when done. [f/t/a/m to switch modes]",
+            Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD),
+        ),
+        WorkflowStage::ShowingQR => (
+            "QR code generated. Press 'q' to exit QR view. [f/t/a/m to switch modes]",
+            Style::default().fg(Color::LightGreen).add_modifier(Modifier::BOLD),
+        ),
+        WorkflowStage::Normal => (
+            "Press arrow keys to select FROM asset, or use [f/t/a/m] shortcuts to navigate",
             Style::default().fg(Color::LightYellow).add_modifier(Modifier::BOLD),
-        ),
-        InputMode::SelectingFrom => (
-            "Press Enter to select from asset, Esc to cancel",
-            Style::default().fg(Color::LightCyan),
-        ),
-        InputMode::SelectingTo => (
-            "Press Enter to select to asset, Esc to cancel",
-            Style::default().fg(Color::LightCyan),
-        ),
-        InputMode::EnteringAddress => (
-            "Enter an address, press Enter when done, Esc to cancel",
-            Style::default().fg(Color::LightCyan),
-        ),
-        InputMode::EnteringAmount => (
-            "Enter an amount, press Enter when done, Esc to cancel",
-            Style::default().fg(Color::LightCyan),
         ),
     };
 
     // During selection modes, always show instructions without blinking
-    // Only blink in normal mode
-    let visible = if matches!(
-        app.input_mode,
-        InputMode::SelectingFrom
-            | InputMode::SelectingTo
-            | InputMode::EnteringAddress
-            | InputMode::EnteringAmount
-    ) {
-        true
-    } else {
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis();
-        (now / 800) % 2 == 0
-    };
+    let visible = true;
 
     if visible {
         let instructions = Paragraph::new(Text::styled(msg, style)).alignment(Alignment::Center);
@@ -101,21 +90,19 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
         )),
     ]);
 
-    // Asset rows are now created directly in the asset_rows_with_indicator
-
-    // Change highlight style based on input mode - make selection more visible 
-    let highlight_style = match app.input_mode {
-        InputMode::SelectingFrom => Style::default()
+    // Determine the highlight style based on the workflow stage
+    let highlight_style = match app.workflow_stage {
+        WorkflowStage::SelectingFrom => Style::default()
             .bg(Color::Red)
             .fg(Color::White)
             .add_modifier(Modifier::BOLD),
-        InputMode::SelectingTo => Style::default()
+        WorkflowStage::SelectingTo => Style::default()
             .bg(Color::Green)
             .fg(Color::White)
             .add_modifier(Modifier::BOLD),
         _ => Style::default()
             .bg(Color::DarkGray)
-            .add_modifier(Modifier::BOLD),
+            .add_modifier(Modifier::BOLD), // Default highlight
     };
 
     // Simplify - just create new rows with indicator
@@ -123,15 +110,18 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
         .iter()
         .enumerate()
         .map(|(i, &asset)| {
+            // Check if this asset is selected as from or to
             let from_selected = app.from_asset.as_ref().map_or(false, |a| a == asset);
             let to_selected = app.to_asset.as_ref().map_or(false, |a| a == asset);
             let currently_selected = app.asset_table_state.selected() == Some(i);
 
-            // Define row styling based on selection
-            let style = if from_selected {
-                Style::default().bg(Color::Red).fg(Color::White)
-            } else if to_selected {
+            // Determine cell style - ALWAYS use green for 'to' asset and red for 'from' asset
+            let style = if to_selected {
+                // TO asset is ALWAYS green
                 Style::default().bg(Color::Green).fg(Color::White)
+            } else if from_selected {
+                // FROM asset is ALWAYS red
+                Style::default().bg(Color::Red).fg(Color::White)
             } else {
                 Style::default()
             };
@@ -158,7 +148,11 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
     )
     .header(asset_table_header)
     .block(Block::default().borders(Borders::ALL))
-    .row_highlight_style(highlight_style);
+    // Conditionally apply row highlight style
+    .row_highlight_style(match app.workflow_stage {
+        WorkflowStage::SelectingFrom | WorkflowStage::SelectingTo => highlight_style,
+        _ => Style::default(), // No highlight in other stages
+    });
 
     // Render asset table with selected row highlight
     let mut table_state = app.asset_table_state.clone();
@@ -169,6 +163,7 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
         table_state.select(Some(0));
     }
 
+    // Apply the current table state
     f.render_stateful_widget(asset_table, chunks[2], &mut table_state);
 
     // Swap info row [from amount] [from ticker] --> [to amount calculated] [to ticker selected]
@@ -198,7 +193,7 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
     // Create a cleaner swap display showing exact values without brackets
     // Format: {from_amount} {from_ticker} --> {to_amount} {to_ticker}
 
-    // FROM section in red
+    // FROM section always in red
     swap_spans.push(Span::styled(from_amount, Style::default().fg(Color::Red)));
 
     swap_spans.push(Span::raw(" "));
@@ -216,7 +211,7 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &App) {
             .add_modifier(Modifier::BOLD),
     ));
 
-    // TO section in green
+    // TO section always in green
     swap_spans.push(Span::styled(
         to_amount_text,
         Style::default().fg(Color::Green),

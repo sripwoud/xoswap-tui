@@ -8,7 +8,7 @@ use ratatui::{
 };
 use std::{error::Error, io};
 
-use crate::models::{App, InputMode, MOCK_ASSETS};
+use crate::models::{App, InputMode, WorkflowStage, MOCK_ASSETS};
 use crate::services::{fetch_quote, generate_qr_code};
 use crate::ui::ui;
 
@@ -23,6 +23,10 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     // Create app state
     let mut app = App::default();
+    
+    // Start in SelectingFrom mode
+    app.input_mode = InputMode::SelectingFrom;
+    app.workflow_stage = WorkflowStage::SelectingFrom;
 
     // Run the app
     let result = run_app(&mut terminal, &mut app);
@@ -48,6 +52,7 @@ where
         terminal.draw(|f| ui::<B>(f, app))?;
 
         if let Event::Key(key) = event::read()? {
+            // Handle global exit keys
             if key.code == KeyCode::Char('q')
                 && !app.show_qr
                 && matches!(app.input_mode, InputMode::Normal)
@@ -59,6 +64,36 @@ where
                 continue;
             }
 
+            // Handle shortcut keys regardless of mode
+            match key.code {
+                KeyCode::Char('f') => {
+                    app.input_mode = InputMode::SelectingFrom;
+                    app.workflow_stage = WorkflowStage::SelectingFrom;
+                    app.message = "Select FROM asset (navigate with up/down, Enter to select)".to_string();
+                    continue;
+                },
+                KeyCode::Char('t') => {
+                    app.input_mode = InputMode::SelectingTo;
+                    app.workflow_stage = WorkflowStage::SelectingTo;
+                    app.message = "Select TO asset (navigate with up/down, Enter to select)".to_string();
+                    continue;
+                },
+                KeyCode::Char('a') => {
+                    app.input_mode = InputMode::Normal;
+                    app.workflow_stage = WorkflowStage::Normal;
+                    app.message = "Enter destination address".to_string();
+                    continue;
+                },
+                KeyCode::Char('m') => {
+                    app.input_mode = InputMode::EnteringAmount;
+                    app.workflow_stage = WorkflowStage::EnteringAmount;
+                    app.message = "Enter amount to swap".to_string();
+                    continue;
+                },
+                _ => {} // Continue to mode-specific handlers
+            }
+
+            // Handle mode-specific input
             match app.input_mode {
                 InputMode::Normal => handle_normal_mode(app, key),
                 InputMode::SelectingFrom => handle_select_from_asset(app, key),
@@ -73,8 +108,20 @@ where
 /// Handle input in normal mode
 fn handle_normal_mode(app: &mut App, key: KeyEvent) {
     match key.code {
+        // In normal mode, arrow keys automatically enter selection mode
+        KeyCode::Up | KeyCode::Down => {
+            // If no mode active, start with from selection
+            app.input_mode = InputMode::SelectingFrom;
+            app.workflow_stage = WorkflowStage::SelectingFrom;
+            app.message = "Select FROM asset (navigate with up/down, Enter to select)".to_string();
+            
+            // Process the key in from selection mode
+            handle_select_from_asset(app, key);
+            return;
+        }
         KeyCode::Char('f') => {
             app.input_mode = InputMode::SelectingFrom;
+            app.workflow_stage = WorkflowStage::SelectingFrom;
             app.message = "Select FROM asset (navigate with up/down, Enter to select)".to_string();
             
             // Highlight the currently selected row in asset table
@@ -93,7 +140,7 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
                 }
             }
         }
-        KeyCode::Up | KeyCode::Char('k') => {
+        KeyCode::Char('k') => {
             // Only navigate in normal mode
             if matches!(app.input_mode, InputMode::Normal) {
                 let selected = match app.asset_table_state.selected() {
@@ -109,7 +156,7 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
                 app.asset_table_state.select(Some(selected));
             }
         }
-        KeyCode::Down | KeyCode::Char('j') => {
+        KeyCode::Char('j') => {
             // Only navigate in normal mode
             if matches!(app.input_mode, InputMode::Normal) {
                 let selected = match app.asset_table_state.selected() {
@@ -127,6 +174,7 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
         }
         KeyCode::Char('t') => {
             app.input_mode = InputMode::SelectingTo;
+            app.workflow_stage = WorkflowStage::SelectingTo;
             app.message = "Select TO asset (navigate with up/down, Enter to select)".to_string();
             
             // Highlight the currently selected row in asset table
@@ -147,9 +195,11 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
         }
         KeyCode::Char('a') => {
             app.input_mode = InputMode::EnteringAddress;
+            app.workflow_stage = WorkflowStage::EnteringAddress;
         }
         KeyCode::Char('m') => {
             app.input_mode = InputMode::EnteringAmount;
+            app.workflow_stage = WorkflowStage::EnteringAmount;
         }
         KeyCode::Char('s') => {
             // Attempt to fetch a quote
@@ -184,7 +234,8 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
 fn handle_select_from_asset(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Esc => {
-            app.input_mode = InputMode::Normal;
+            app.input_mode = InputMode::EnteringAmount;
+            app.workflow_stage = WorkflowStage::EnteringAmount;
             app.message = "Cancelled asset selection".to_string();
         }
         KeyCode::Up => {
@@ -199,7 +250,7 @@ fn handle_select_from_asset(app: &mut App, key: KeyEvent) {
                 None => 0,
             };
             app.asset_table_state.select(Some(selected));
-            app.message = format!("Selecting: {}", MOCK_ASSETS[selected]);
+            app.message = format!("Selecting TO asset: {}", MOCK_ASSETS[selected]);
         }
         KeyCode::Down => {
             let selected = match app.asset_table_state.selected() {
@@ -217,14 +268,21 @@ fn handle_select_from_asset(app: &mut App, key: KeyEvent) {
         }
         KeyCode::Enter => {
             if let Some(i) = app.asset_table_state.selected() {
+                // Set the from asset
                 app.from_asset = Some(MOCK_ASSETS[i].to_string());
-                app.message = format!("FROM asset selected: {}", MOCK_ASSETS[i]);
-                app.input_mode = InputMode::Normal;
                 
                 // Clear quotes and QR when changing from asset
                 app.quotes.clear();
                 app.qr_code = None;
                 app.show_qr = false;
+                
+                // Progress to next stage in workflow
+                app.workflow_stage = WorkflowStage::SelectingTo;
+                app.input_mode = InputMode::SelectingTo;
+                app.message = format!("FROM asset selected: {}. Now select TO asset.", MOCK_ASSETS[i]);
+                
+                // Log very clearly which asset was selected
+                println!("FROM ASSET SET TO: {}", MOCK_ASSETS[i]);
                 
                 // Auto-fetch quotes when both from and to assets are selected
                 if app.to_asset.is_some() {
@@ -277,9 +335,16 @@ fn handle_select_to_asset(app: &mut App, key: KeyEvent) {
         }
         KeyCode::Enter => {
             if let Some(i) = app.asset_table_state.selected() {
+                // Set the to asset
                 app.to_asset = Some(MOCK_ASSETS[i].to_string());
-                app.message = format!("TO asset selected: {}", MOCK_ASSETS[i]);
-                app.input_mode = InputMode::Normal;
+                
+                // Progress to next stage in workflow
+                app.workflow_stage = WorkflowStage::EnteringAmount;
+                app.input_mode = InputMode::EnteringAmount;
+                app.message = format!("TO asset selected: {}. Now enter amount to swap.", MOCK_ASSETS[i]);
+                
+                // Log very clearly which asset was selected as TO
+                println!("TO ASSET SET TO: {}", MOCK_ASSETS[i]);
                 
                 // Auto-fetch quotes when both from and to assets are selected
                 if app.from_asset.is_some() {
@@ -302,11 +367,14 @@ fn handle_address_input(app: &mut App, key: KeyEvent) {
             app.input_mode = InputMode::Normal;
         }
         KeyCode::Enter => {
-            app.input_mode = InputMode::Normal;
+            // Progress to next stage in workflow - show QR code
+            app.workflow_stage = WorkflowStage::ShowingQR;
+            app.message = "Address entered. Generating QR code...".to_string();
 
             // Auto-fetch quotes and generate QR if all info is available
             if app.from_asset.is_some() && app.to_asset.is_some() && !app.amount.is_empty() {
                 fetch_quotes_from_all_providers(app);
+                app.show_qr = true;
             }
         }
         KeyCode::Char(c) => {
@@ -326,7 +394,10 @@ fn handle_amount_input(app: &mut App, key: KeyEvent) {
             app.input_mode = InputMode::Normal;
         }
         KeyCode::Enter => {
-            app.input_mode = InputMode::Normal;
+            // Progress to next stage in workflow
+            app.workflow_stage = WorkflowStage::EnteringAddress;
+            app.input_mode = InputMode::EnteringAddress;
+            app.message = "Amount entered. Now enter destination address.".to_string();
 
             // Auto-fetch quotes when amount is entered and both assets are selected
             if app.from_asset.is_some() && app.to_asset.is_some() && !app.amount.is_empty() {
