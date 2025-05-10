@@ -1,26 +1,36 @@
 use std::error::Error;
 use std::time::Duration;
 
+use crossterm::event::{self, Event as CEvent, KeyCode, KeyEvent};
 use tuirealm::terminal::CrosstermTerminalAdapter;
 use tuirealm::PollStrategy;
 use tuirealm::Update;
 
 use crate::ui::model::Model;
-use crate::ui::msg::Msg;
 
 pub fn run() -> Result<(), Box<dyn Error>> {
     // Create terminal
     let terminal = CrosstermTerminalAdapter::new()?;
-    
+
     // Setup application
     let mut model = Model::new(terminal);
-    
+
     // Enter alternate screen
     model.terminal.enter_alternate_screen()?;
     model.terminal.enable_raw_mode()?;
-    
+
     // Main loop
     while !model.quit {
+        // Check for 'q' key directly
+        if event::poll(Duration::from_millis(0))? {
+            if let CEvent::Key(KeyEvent { code, .. }) = event::read()? {
+                if code == KeyCode::Char('q') || code == KeyCode::Esc {
+                    model.quit = true;
+                    break;
+                }
+            }
+        }
+
         // Tick
         match model.app.tick(PollStrategy::Once) {
             Err(err) => {
@@ -39,18 +49,18 @@ pub fn run() -> Result<(), Box<dyn Error>> {
             }
             _ => {}
         }
-        
+
         // Redraw
         if model.redraw {
             model.view();
             model.redraw = false;
         }
     }
-    
+
     // Restore terminal
     model.terminal.leave_alternate_screen()?;
     model.terminal.disable_raw_mode()?;
     model.terminal.clear_screen()?;
-    
+
     Ok(())
 }

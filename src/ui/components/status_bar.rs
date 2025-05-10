@@ -1,9 +1,9 @@
-//! ## Header
-//!
-//! Header component for the application
+//! ## StatusBar
+//! 
+//! Status bar component for the application
 
 use tuirealm::command::{Cmd, CmdResult};
-use tuirealm::event::{Key, KeyEvent, KeyModifiers, NoUserEvent};
+use tuirealm::event::NoUserEvent;
 use tuirealm::props::{Alignment, Color, Style, TextModifiers};
 use tuirealm::ratatui::layout::Rect;
 use tuirealm::ratatui::widgets::Paragraph;
@@ -11,14 +11,15 @@ use tuirealm::{AttrValue, Attribute, Component, Event, Frame, MockComponent, Pro
 
 use crate::ui::msg::Msg;
 
-/// Header component that displays the application title
+/// StatusBar component that displays status information
+/// This is a visual-only component that doesn't handle any events
 #[derive(Default)]
-pub struct Header {
+pub struct StatusBar {
     props: Props,
 }
 
-impl Header {
-    /// Create a new Header
+impl StatusBar {
+    /// Create a new StatusBar
     pub fn new() -> Self {
         Self {
             props: Props::default(),
@@ -26,19 +27,19 @@ impl Header {
     }
 }
 
-impl MockComponent for Header {
+impl MockComponent for StatusBar {
     fn view(&mut self, frame: &mut Frame, area: Rect) {
         // Check if visible
         if self.props.get_or(Attribute::Display, AttrValue::Flag(true)) == AttrValue::Flag(true) {
             // Get properties
-            let title = "XOSwap TUI (Press q to quit)";
-            let alignment = Alignment::Center;
-            let foreground = Color::Cyan;
+            let status_text = "Ready";
+            let alignment = Alignment::Right;
+            let foreground = Color::Gray;
             let background = Color::Reset;
-            let modifiers = TextModifiers::BOLD;
+            let modifiers = TextModifiers::empty();
 
             frame.render_widget(
-                Paragraph::new(title)
+                Paragraph::new(status_text)
                     .style(
                         Style::default()
                             .fg(foreground)
@@ -68,9 +69,9 @@ impl MockComponent for Header {
     }
 }
 
-impl Component<Msg, NoUserEvent> for Header {
+impl Component<Msg, NoUserEvent> for StatusBar {
     fn on(&mut self, _: Event<NoUserEvent>) -> Option<Msg> {
-        // does nothing
+        // This component doesn't react to events
         None
     }
 }

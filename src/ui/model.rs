@@ -10,6 +10,7 @@ use tuirealm::terminal::{TerminalAdapter, TerminalBridge};
 use tuirealm::{Application, EventListenerCfg, Update};
 
 use crate::ui::components::header::Header;
+use crate::ui::components::status_bar::StatusBar;
 use crate::ui::id::Id;
 use crate::ui::msg::Msg;
 
@@ -57,13 +58,19 @@ where
 
     /// Mount all components
     fn mount_components(&mut self) {
-        // Mount the header and make it active
+        // Mount the header component and make it active
         assert!(self
             .app
-            .mount(Id::Header, Box::new(Header::default()), Vec::default())
+            .mount(Id::Header, Box::new(Header::new()), Vec::default())
             .is_ok());
 
-        // Make the header active so it can receive keyboard events
+        // Mount the status bar component (visual only)
+        assert!(self
+            .app
+            .mount(Id::StatusBar, Box::new(StatusBar::new()), Vec::default())
+            .is_ok());
+
+        // Make the header component active to receive keyboard events
         assert!(self.app.active(&Id::Header).is_ok());
     }
 
@@ -79,7 +86,8 @@ where
                     .constraints(
                         [
                             Constraint::Length(3), // Header
-                            Constraint::Min(0),    // Content (unused for now)
+                            Constraint::Min(1),    // Content (unused for now)
+                            Constraint::Length(1), // Status Bar
                         ]
                         .as_ref(),
                     )
@@ -87,6 +95,8 @@ where
 
                 // Render the header
                 self.app.view(&Id::Header, f, chunks[0]);
+                // Render the status bar
+                self.app.view(&Id::StatusBar, f, chunks[2]);
             })
             .is_ok());
     }
