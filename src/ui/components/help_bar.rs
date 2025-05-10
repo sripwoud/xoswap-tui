@@ -1,6 +1,6 @@
-//! ## StatusBar
-//!
-//! Status bar component for the application
+//! ## HelpBar
+//! 
+//! Help bar component for the application
 
 use tuirealm::command::{Cmd, CmdResult};
 use tuirealm::event::NoUserEvent;
@@ -11,15 +11,15 @@ use tuirealm::{AttrValue, Attribute, Component, Event, Frame, MockComponent, Pro
 
 use crate::ui::msg::Msg;
 
-/// StatusBar component that displays status information
+/// HelpBar component that displays help information
 /// This is a visual-only component that doesn't handle any events
 #[derive(Default)]
-pub struct StatusBar {
+pub struct HelpBar {
     props: Props,
 }
 
-impl StatusBar {
-    /// Create a new StatusBar
+impl HelpBar {
+    /// Create a new HelpBar
     pub fn new() -> Self {
         Self {
             props: Props::default(),
@@ -27,7 +27,7 @@ impl StatusBar {
     }
 }
 
-impl MockComponent for StatusBar {
+impl MockComponent for HelpBar {
     fn view(&mut self, frame: &mut Frame, area: Rect) {
         // Check if visible
         if self.props.get_or(Attribute::Display, AttrValue::Flag(true)) == AttrValue::Flag(true) {
@@ -70,7 +70,7 @@ impl MockComponent for StatusBar {
     }
 }
 
-impl Component<Msg, NoUserEvent> for StatusBar {
+impl Component<Msg, NoUserEvent> for HelpBar {
     fn on(&mut self, _: Event<NoUserEvent>) -> Option<Msg> {
         // This component doesn't react to events
         None

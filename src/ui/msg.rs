@@ -10,9 +10,9 @@ pub enum Msg {
     /// Asset was highlighted (but not selected)
     AssetSelected(usize),
     /// Asset was chosen as the FROM asset (Enter pressed)
-    AssetChosenAsFrom(usize),
-    /// Asset was chosen as the TO asset (Tab pressed)
-    AssetChosenAsTo(usize),
+        AssetChosenAsFrom(usize, String),
+        /// Asset was chosen as the TO asset (Tab pressed)
+        AssetChosenAsTo(usize, String),
     /// Enter FROM asset selection mode
     EnterFromAssetMode,
     /// Enter TO asset selection mode

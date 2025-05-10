@@ -5,14 +5,17 @@
 use std::time::Duration;
 
 use tuirealm::event::NoUserEvent;
+use tuirealm::props::{AttrValue, Attribute};
 use tuirealm::ratatui::layout::{Constraint, Direction, Layout};
 use tuirealm::terminal::{TerminalAdapter, TerminalBridge};
 use tuirealm::{Application, EventListenerCfg, Update};
 
 use crate::ui::components::asset_table::AssetTable;
 use crate::ui::components::header::Header;
+use crate::ui::components::help_bar::HelpBar;
+use crate::ui::components::instructions::Instructions;
 use crate::ui::components::instructions_bar::InstructionsBar;
-use crate::ui::components::status_bar::StatusBar;
+use crate::ui::components::summary_bar::SummaryBar;
 use crate::ui::id::Id;
 use crate::ui::msg::Msg;
 
@@ -78,10 +81,22 @@ where
             .mount(Id::AssetTable, Box::new(AssetTable::new()), Vec::default())
             .is_ok());
 
-        // Mount the status bar component (visual only)
+        // Mount the dynamic instructions component
         assert!(self
             .app
-            .mount(Id::StatusBar, Box::new(StatusBar::new()), Vec::default())
+            .mount(Id::Instructions, Box::new(Instructions::new()), Vec::default())
+            .is_ok());
+
+        // Mount the summary bar component
+        assert!(self
+            .app
+            .mount(Id::SummaryBar, Box::new(SummaryBar::new()), Vec::default())
+            .is_ok());
+
+        // Mount the help bar component (visual only)
+        assert!(self
+            .app
+            .mount(Id::HelpBar, Box::new(HelpBar::new()), Vec::default())
             .is_ok());
 
         // Make the asset table active to receive keyboard events
@@ -93,29 +108,56 @@ where
         assert!(self
             .terminal
             .draw(|f| {
-                // Create the layout
-                let chunks = Layout::default()
+                // First, split the screen vertically for the header and the rest
+                let main_chunks = Layout::default()
                     .direction(Direction::Vertical)
                     .margin(0)
                     .constraints(
                         [
                             Constraint::Length(3), // Header
-                            Constraint::Length(1), // Instructions Bar
-                            Constraint::Min(1),    // Content (unused for now)
-                            Constraint::Length(1), // Status Bar
+                            Constraint::Min(1),    // Rest of the UI
                         ]
                         .as_ref(),
                     )
                     .split(f.area());
 
                 // Render the header
-                self.app.view(&Id::Header, f, chunks[0]);
-                // Render the instructions bar
-                self.app.view(&Id::InstructionsBar, f, chunks[1]);
-                // Render the asset table
-                self.app.view(&Id::AssetTable, f, chunks[2]);
-                // Render the status bar
-                self.app.view(&Id::StatusBar, f, chunks[3]);
+                self.app.view(&Id::Header, f, main_chunks[0]);
+
+                // Split the rest horizontally for sidebar and main content
+                let body_chunks = Layout::default()
+                    .direction(Direction::Horizontal)
+                    .constraints(
+                        [
+                            Constraint::Percentage(30), // Sidebar (asset table)
+                            Constraint::Percentage(70), // Main content
+                        ]
+                        .as_ref(),
+                    )
+                    .split(main_chunks[1]);
+
+                // Render the asset table as the sidebar
+                self.app.view(&Id::AssetTable, f, body_chunks[0]);
+
+                // Split the main content vertically
+                let main_content_chunks = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints(
+                        [
+                            Constraint::Length(1),  // Instructions Bar
+                            Constraint::Min(1),     // Main area (instructions)
+                            Constraint::Length(1),  // Summary Bar
+                            Constraint::Length(1),  // Help Bar
+                        ]
+                        .as_ref(),
+                    )
+                    .split(body_chunks[1]);
+
+                // Render the instruction components
+                self.app.view(&Id::InstructionsBar, f, main_content_chunks[0]);
+                self.app.view(&Id::Instructions, f, main_content_chunks[1]);
+                self.app.view(&Id::SummaryBar, f, main_content_chunks[2]);
+                self.app.view(&Id::HelpBar, f, main_content_chunks[3]);
             })
             .is_ok());
     }
@@ -141,24 +183,70 @@ where
                     // Asset was highlighted
                     None
                 }
-                Msg::AssetChosenAsFrom(index) => {
+                Msg::AssetChosenAsFrom(index, ticker) => {
                     // Asset was selected as FROM asset
                     self.redraw = true;
+                    
+                    // Update the summary bar with FROM ticker
+                    let _ = self.app.attr(
+                        &Id::SummaryBar,
+                        Attribute::Custom("from_ticker"),
+                        AttrValue::String(ticker)
+                    );
+                    
+                    // Update instructions state to select TO asset
+                    let _ = self.app.attr(
+                        &Id::Instructions,
+                        Attribute::Custom("state"),
+                        AttrValue::Number(1) // SelectToAsset
+                    );
+                    
                     None
                 }
-                Msg::AssetChosenAsTo(index) => {
+                Msg::AssetChosenAsTo(index, ticker) => {
                     // Asset was selected as TO asset
                     self.redraw = true;
+                    
+                    // Update the summary bar with TO ticker
+                    let _ = self.app.attr(
+                        &Id::SummaryBar,
+                        Attribute::Custom("to_ticker"),
+                        AttrValue::String(ticker)
+                    );
+                    
+                    // Update instructions state to select FROM amount
+                    let _ = self.app.attr(
+                        &Id::Instructions, 
+                        Attribute::Custom("state"),
+                        AttrValue::Number(2) // SelectFromAmount
+                    );
+                    
                     None
                 }
                 Msg::EnterFromAssetMode => {
                     // Entering FROM asset selection mode
                     self.redraw = true;
+                    
+                    // Update the instructions state
+                    let _ = self.app.attr(
+                        &Id::Instructions,
+                        Attribute::Custom("state"),
+                        AttrValue::Number(0) // SelectFromAsset
+                    );
+                    
                     None
                 }
                 Msg::EnterToAssetMode => {
                     // Entering TO asset selection mode
                     self.redraw = true;
+                    
+                    // Update the instructions state
+                    let _ = self.app.attr(
+                        &Id::Instructions,
+                        Attribute::Custom("state"),
+                        AttrValue::Number(1) // SelectToAsset
+                    );
+                    
                     None
                 }
                 Msg::ExitAssetSelectionMode => {

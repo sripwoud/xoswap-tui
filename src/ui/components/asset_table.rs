@@ -96,12 +96,16 @@ impl AssetTable {
     fn select_as_from_asset(&mut self) {
         // Only set FROM if it's not already the TO asset
         if Some(self.current_index) != self.to_asset_index {
+            let prev_from = self.from_asset_index;
             self.from_asset_index = Some(self.current_index);
             
             // Automatically switch to TO asset mode if TO hasn't been selected yet
             if self.to_asset_index.is_none() {
                 self.enter_to_mode();
             }
+            
+            // Return the selected asset name
+            return;
         }
     }
 
@@ -109,11 +113,14 @@ impl AssetTable {
     fn select_as_to_asset(&mut self) {
         // Only set TO if it's not already the FROM asset
         if Some(self.current_index) != self.from_asset_index {
+            let prev_to = self.to_asset_index;
             self.to_asset_index = Some(self.current_index);
             
-            // After selecting TO asset, we could handle switching to amount mode here
-            // (we'll implement this later)
+            // After selecting TO asset, switch to amount mode
             self.exit_selection_mode();
+            
+            // Return the selected asset name
+            return;
         }
     }
 
@@ -342,11 +349,19 @@ impl Component<Msg, NoUserEvent> for AssetTable {
                 match self.mode {
                     SelectionMode::Normal | SelectionMode::FromAsset => {
                         self.select_as_from_asset();
-                        Some(Msg::AssetChosenAsFrom(self.current_index))
+                        if let Some(asset) = self.assets.get(self.current_index) {
+                            Some(Msg::AssetChosenAsFrom(self.current_index, asset.name.clone()))
+                        } else {
+                            Some(Msg::AssetChosenAsFrom(self.current_index, String::new()))
+                        }
                     },
                     SelectionMode::ToAsset => {
                         self.select_as_to_asset();
-                        Some(Msg::AssetChosenAsTo(self.current_index))
+                        if let Some(asset) = self.assets.get(self.current_index) {
+                            Some(Msg::AssetChosenAsTo(self.current_index, asset.name.clone()))
+                        } else {
+                            Some(Msg::AssetChosenAsTo(self.current_index, String::new()))
+                        }
                     },
                 }
             },
@@ -356,7 +371,11 @@ impl Component<Msg, NoUserEvent> for AssetTable {
             }) => {
                 // Tab always selects TO asset
                 self.select_as_to_asset();
-                Some(Msg::AssetChosenAsTo(self.current_index))
+                if let Some(asset) = self.assets.get(self.current_index) {
+                    Some(Msg::AssetChosenAsTo(self.current_index, asset.name.clone()))
+                } else {
+                    Some(Msg::AssetChosenAsTo(self.current_index, String::new()))
+                }
             },
             Event::Keyboard(KeyEvent {
                 code: Key::Esc,
