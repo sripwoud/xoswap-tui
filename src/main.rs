@@ -1,5 +1,3 @@
-use std::error::Error;
-
-fn main() -> Result<(), Box<dyn Error>> {
-    xoswap::main()
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    xoswap::run()
 }

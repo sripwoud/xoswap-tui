@@ -11,3 +11,7 @@ path = "src/main.rs"
 [dependencies]
 crossterm = "0.29.0"
 ratatui = "0.29.0"
+tuirealm = "2.1.0"
+tui-realm-stdlib = "2.0.1"
+instant = "0.1.12"
+lazy_static = "1.4.0"

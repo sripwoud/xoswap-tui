@@ -4,6 +4,7 @@ description = "Build the project"
 alias = "b"
 
 [tasks.run]
+alias = "r"
 run = "cargo run --bin xoswap"
 description = "Run the application"
 
