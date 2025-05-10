@@ -19,23 +19,41 @@ pub fn fetch_quote(
         return Err(SwapError::InvalidAmount);
     }
     
-    let from_price = match from_asset {
-        "BTC" => 40000.0,
-        "ETH" => 2000.0,
-        "XOS" => 1.0,
+    // Get asset indices
+    let from_idx = match from_asset {
+        "BTC" => 0,
+        "ETH" => 1,
+        "SOL" => 2,
         _ => return Err(SwapError::NoAssetSelected),
     };
     
-    let to_price = match to_asset {
-        "BTC" => 40000.0,
-        "ETH" => 2000.0,
-        "XOS" => 1.0,
+    let to_idx = match to_asset {
+        "BTC" => 0,
+        "ETH" => 1,
+        "SOL" => 2,
         _ => return Err(SwapError::NoAssetSelected),
     };
+    
+    // Calculate the base exchange rate
+    let exchange_idx = from_idx * 3 + to_idx;
+    let base_rate = crate::models::MOCK_EXCHANGE_RATES[exchange_idx];
+    
+    // Add some variability based on provider (±5%)
+    let provider_factor = match selected_provider {
+        0 => 1.05,  // 0x: 5% better than base
+        1 => 0.98,  // 1inch: 2% worse than base
+        2 => 1.02,  // Paraswap: 2% better than base
+        3 => 0.95,  // Rango: 5% worse than base
+        4 => 1.00,  // Changelly: same as base
+        _ => 1.00,  // Default
+    };
+    
+    // Calculate the actual quote with the provider-specific rate
+    let quote_amount = amount * base_rate * provider_factor;
     
     quotes.insert(
         providers[selected_provider].0.clone(),
-        (amount * from_price) / to_price,
+        quote_amount,
     );
     
     Ok(quotes)

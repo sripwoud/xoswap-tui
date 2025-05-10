@@ -9,7 +9,6 @@ pub enum InputMode {
     SelectingTo,
     EnteringAddress,
     EnteringAmount,
-    SelectingProvider,
     Normal,
 }
 
@@ -18,6 +17,19 @@ pub const MOCK_ASSETS: [&str; 3] = ["BTC", "ETH", "SOL"];
 
 /// Mock data for asset prices
 pub const MOCK_PRICES: [f64; 3] = [100000.0, 2000.0, 140.0];
+
+/// Mock data for exchange rates between assets
+pub const MOCK_EXCHANGE_RATES: [f64; 9] = [
+    1.0,    // BTC->BTC
+    50.0,   // BTC->ETH
+    714.28, // BTC->SOL
+    0.02,   // ETH->BTC
+    1.0,    // ETH->ETH
+    14.28,  // ETH->SOL
+    0.0014, // SOL->BTC
+    0.07,   // SOL->ETH
+    1.0,    // SOL->SOL
+];
 
 /// Mock data for swap providers
 pub const MOCK_PROVIDERS: [(&str, &str); 5] = [
@@ -36,8 +48,7 @@ pub struct App {
     pub amount: String,
     pub message: String,
     pub input_mode: InputMode,
-    pub from_asset_table_state: TableState,
-    pub to_asset_table_state: TableState,
+    pub asset_table_state: TableState,
     pub providers: Vec<(String, String)>,
     pub quotes: HashMap<String, f64>,
     pub selected_provider: Option<usize>,
@@ -47,10 +58,8 @@ pub struct App {
 
 impl Default for App {
     fn default() -> Self {
-        let mut from_state = TableState::default();
-        from_state.select(Some(0));
-        let mut to_state = TableState::default();
-        to_state.select(Some(0));
+        let mut asset_state = TableState::default();
+        asset_state.select(Some(0));
 
         Self {
             from_asset: None,
@@ -59,8 +68,7 @@ impl Default for App {
             amount: String::new(),
             message: String::new(),
             input_mode: InputMode::Normal,
-            from_asset_table_state: from_state,
-            to_asset_table_state: to_state,
+            asset_table_state: asset_state,
             providers: MOCK_PROVIDERS
                 .iter()
                 .map(|&(name, url)| (name.to_string(), url.to_string()))
