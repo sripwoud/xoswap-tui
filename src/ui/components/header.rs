@@ -31,7 +31,7 @@ impl MockComponent for Header {
         // Check if visible
         if self.props.get_or(Attribute::Display, AttrValue::Flag(true)) == AttrValue::Flag(true) {
             // Get properties
-            let title = "XOSwap TUI (Press q to quit)";
+            let title = "XOSwap TUI";
             let alignment = Alignment::Center;
             let foreground = Color::Cyan;
             let background = Color::Reset;

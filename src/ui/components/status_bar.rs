@@ -1,5 +1,5 @@
 //! ## StatusBar
-//! 
+//!
 //! Status bar component for the application
 
 use tuirealm::command::{Cmd, CmdResult};
@@ -32,8 +32,9 @@ impl MockComponent for StatusBar {
         // Check if visible
         if self.props.get_or(Attribute::Display, AttrValue::Flag(true)) == AttrValue::Flag(true) {
             // Get properties
-            let status_text = "Ready";
-            let alignment = Alignment::Right;
+            let status_text =
+                "(q)uit | (f)rom asset | (t)o asset | to a(m)ount | receive (a)address";
+            let alignment = Alignment::Center;
             let foreground = Color::Gray;
             let background = Color::Reset;
             let modifiers = TextModifiers::empty();
