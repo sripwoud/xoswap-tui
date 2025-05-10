@@ -10,6 +10,7 @@ use tuirealm::terminal::{TerminalAdapter, TerminalBridge};
 use tuirealm::{Application, EventListenerCfg, Update};
 
 use crate::ui::components::header::Header;
+use crate::ui::components::instructions_bar::InstructionsBar;
 use crate::ui::components::status_bar::StatusBar;
 use crate::ui::id::Id;
 use crate::ui::msg::Msg;
@@ -64,6 +65,12 @@ where
             .mount(Id::Header, Box::new(Header::new()), Vec::default())
             .is_ok());
 
+        // Mount the instructions bar component (visual only)
+        assert!(self
+            .app
+            .mount(Id::InstructionsBar, Box::new(InstructionsBar::new()), Vec::default())
+            .is_ok());
+
         // Mount the status bar component (visual only)
         assert!(self
             .app
@@ -86,6 +93,7 @@ where
                     .constraints(
                         [
                             Constraint::Length(3), // Header
+                            Constraint::Length(1), // Instructions Bar
                             Constraint::Min(1),    // Content (unused for now)
                             Constraint::Length(1), // Status Bar
                         ]
@@ -95,8 +103,10 @@ where
 
                 // Render the header
                 self.app.view(&Id::Header, f, chunks[0]);
+                // Render the instructions bar
+                self.app.view(&Id::InstructionsBar, f, chunks[1]);
                 // Render the status bar
-                self.app.view(&Id::StatusBar, f, chunks[2]);
+                self.app.view(&Id::StatusBar, f, chunks[3]);
             })
             .is_ok());
     }
